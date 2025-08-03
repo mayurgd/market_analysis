@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BTST Trade Analysis - Candlestick Charts</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/plotly.js/2.26.0/plotly.min.js"></script>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            backdrop-filter: blur(10px);
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .header h1 {
+            font-size: 2.5em;
+            margin: 0;
+            font-weight: 700;
+        }
+        
+        .header p {
+            font-size: 1.2em;
+            color: #666;
+            margin: 10px 0 0 0;
+        }
+        
+        .trade-container {
+            margin-bottom: 50px;
+            border: 2px solid #e0e0e0;
+            border-radius: 15px;
+            padding: 25px;
+            background: #fafafa;
+            transition: all 0.3s ease;
+        }
+        
+        .trade-container:hover {
+            border-color: #667eea;
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(102, 126, 234, 0.1);
+        }
+        
+        .trade-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+        
+        .trade-title {
+            font-size: 1.5em;
+            font-weight: 600;
+            color: #333;
+        }
+        
+        .trade-info {
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+        
+        .trade-metric {
+            background: white;
+            padding: 8px 15px;
+            border-radius: 20px;
+            font-size: 0.9em;
+            font-weight: 500;
+            border: 1px solid #e0e0e0;
+        }
+        
+        .long-trade { border-left: 5px solid #4CAF50; }
+        .short-trade { border-left: 5px solid #f44336; }
+        
+        .profit { color: #4CAF50; }
+        .loss { color: #f44336; }
+        
+        .chart-container {
+            height: 500px;
+            margin-top: 20px;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+        
+        .legend {
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+            margin: 20px 0;
+            flex-wrap: wrap;
+        }
+        
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.9em;
+        }
+        
+        .legend-color {
+            width: 20px;
+            height: 3px;
+            border-radius: 2px;
+        }
+        
+        .controls {
+            text-align: center;
+            margin: 30px 0;
+        }
+        
+        .btn {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            border-radius: 25px;
+            font-size: 1em;
+            font-weight: 500;
+            cursor: pointer;
+            margin: 0 10px;
+            transition: all 0.3s ease;
+        }
+        
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(102, 126, 234, 0.3);
+        }
+        
+        .explanation {
+            background: #f8f9fa;
+            border-radius: 15px;
+            padding: 25px;
+            margin: 30px 0;
+            border-left: 5px solid #667eea;
+        }
+        
+        .explanation h3 {
+            color: #333;
+            margin-top: 0;
+        }
+        
+        .explanation ul {
+            color: #666;
+            line-height: 1.6;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>BTST Breakout Strategy</h1>
+            <p>5-Day Moving Window Analysis with Trade Visualization</p>
+        </div>
+        
+        <div class="explanation">
+            <h3>📊 Strategy Explanation</h3>
+            <ul>
+                <li><strong>5-Day Window:</strong> Days 1-3 form reference high/low, Day 4 is signal day, Day 5 is exit</li>
+                <li><strong>Long Signal:</strong> When Day 4 closes above high of Days 1-3</li>
+                <li><strong>Short Signal:</strong> When Day 4 closes below low of Days 1-3</li>
+                <li><strong>Entry:</strong> Day 4 close price</li>
+                <li><strong>Exit:</strong> Day 5 open price</li>
+                <li><strong>Points Measured:</strong> Difference between entry and exit in breakout direction</li>
+            </ul>
+        </div>
+        
+        <div class="legend">
+            <div class="legend-item">
+                <div class="legend-color" style="background: #1f77b4;"></div>
+                <span>Reference Period (Days 1-3)</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: #ff7f0e;"></div>
+                <span>Signal Day (Day 4)</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: #2ca02c;"></div>
+                <span>Exit Day (Day 5)</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: #d62728;"></div>
+                <span>Reference High/Low</span>
+            </div>
+        </div>
+        
+        <div class="controls">
+            <button class="btn" onclick="generateTrades()">🔄 Generate New Sample Trades</button>
+            <button class="btn" onclick="showAllTrades()">📈 Show All Trades</button>
+        </div>
+        
+        <div id="trades-container"></div>
+    </div>
+
+    <script>
+        // Sample extended data for demonstration
+        const sampleData = [
+            {date: '2025-04-01', open: 23341.1, high: 23565.15, low: 23136.4, close: 23165.7},
+            {date: '2025-04-02', open: 23192.6, high: 23350.0, low: 23158.45, close: 23332.35},
+            {date: '2025-04-03', open: 23150.3, high: 23306.5, low: 23145.8, close: 23250.1},
+            {date: '2025-04-04', open: 23190.4, high: 23214.7, low: 22857.45, close: 22904.45},
+            {date: '2025-04-07', open: 21758.4, high: 22254.0, low: 21743.65, close: 22161.6},
+            {date: '2025-04-08', open: 22200.0, high: 22400.0, low: 22100.0, close: 22350.0},
+            {date: '2025-04-09', open: 22380.0, high: 22500.0, low: 22250.0, close: 22450.0},
+            {date: '2025-04-10', open: 22400.0, high: 22650.0, low: 22350.0, close: 22600.0},
+            {date: '2025-04-11', open: 22580.0, high: 22700.0, low: 22450.0, close: 22650.0},
+            {date: '2025-04-14', open: 22680.0, high: 22800.0, low: 22550.0, close: 22750.0},
+            {date: '2025-04-15', open: 22720.0, high: 22850.0, low: 22600.0, close: 22800.0},
+            {date: '2025-04-16', open: 22780.0, high: 22900.0, low: 22650.0, close: 22500.0},
+            {date: '2025-04-17', open: 22450.0, high: 22600.0, low: 22300.0, close: 22350.0}
+        ];
+
+        function identifyTrades(data) {
+            const trades = [];
+            
+            for (let i = 3; i < data.length - 1; i++) {
+                // Get 5-day window
+                const refPeriod = data.slice(i - 3, i); // Days 1-3
+                const signalDay = data[i]; // Day 4
+                const exitDay = data[i + 1]; // Day 5
+                
+                // Calculate reference levels
+                const refHigh = Math.max(...refPeriod.map(d => d.high));
+                const refLow = Math.min(...refPeriod.map(d => d.low));
+                
+                // Check for breakouts
+                if (signalDay.close > refHigh) {
+                    // Long trade
+                    const pointsGained = exitDay.open - signalDay.close;
+                    trades.push({
+                        type: 'LONG',
+                        windowStart: i - 3,
+                        signalIndex: i,
+                        exitIndex: i + 1,
+                        refHigh: refHigh,
+                        refLow: refLow,
+                        entryPrice: signalDay.close,
+                        exitPrice: exitDay.open,
+                        pointsGained: pointsGained,
+                        entryDate: signalDay.date,
+                        exitDate: exitDay.date
+                    });
+                } else if (signalDay.close < refLow) {
+                    // Short trade
+                    const pointsGained = signalDay.close - exitDay.open;
+                    trades.push({
+                        type: 'SHORT',
+                        windowStart: i - 3,
+                        signalIndex: i,
+                        exitIndex: i + 1,
+                        refHigh: refHigh,
+                        refLow: refLow,
+                        entryPrice: signalDay.close,
+                        exitPrice: exitDay.open,
+                        pointsGained: pointsGained,
+                        entryDate: signalDay.date,
+                        exitDate: exitDay.date
+                    });
+                }
+            }
+            
+            return trades;
+        }
+
+        function createCandlestickChart(trade, data, containerId) {
+            // Get the 5-day window data
+            const windowData = data.slice(trade.windowStart, trade.exitIndex + 1);
+            
+            // Candlestick trace
+            const candlestickTrace = {
+                x: windowData.map(d => d.date),
+                open: windowData.map(d => d.open),
+                high: windowData.map(d => d.high),
+                low: windowData.map(d => d.low),
+                close: windowData.map(d => d.close),
+                type: 'candlestick',
+                name: 'Price',
+                increasing: {line: {color: '#26a69a'}},
+                decreasing: {line: {color: '#ef5350'}}
+            };
+            
+            // Reference high line
+            const refHighTrace = {
+                x: windowData.map(d => d.date),
+                y: new Array(windowData.length).fill(trade.refHigh),
+                type: 'scatter',
+                mode: 'lines',
+                name: `Reference High (${trade.refHigh.toFixed(2)})`,
+                line: {color: '#d62728', width: 2, dash: 'dash'}
+            };
+            
+            // Reference low line
+            const refLowTrace = {
+                x: windowData.map(d => d.date),
+                y: new Array(windowData.length).fill(trade.refLow),
+                type: 'scatter',
+                mode: 'lines',
+                name: `Reference Low (${trade.refLow.toFixed(2)})`,
+                line: {color: '#d62728', width: 2, dash: 'dash'}
+            };
+            
+            // Entry point
+            const entryTrace = {
+                x: [trade.entryDate],
+                y: [trade.entryPrice],
+                type: 'scatter',
+                mode: 'markers',
+                name: `Entry: ${trade.entryPrice.toFixed(2)}`,
+                marker: {
+                    color: trade.type === 'LONG' ? '#4CAF50' : '#f44336',
+                    size: 12,
+                    symbol: trade.type === 'LONG' ? 'triangle-up' : 'triangle-down'
+                }
+            };
+            
+            // Exit point
+            const exitTrace = {
+                x: [trade.exitDate],
+                y: [trade.exitPrice],
+                type: 'scatter',
+                mode: 'markers',
+                name: `Exit: ${trade.exitPrice.toFixed(2)}`,
+                marker: {
+                    color: trade.pointsGained > 0 ? '#4CAF50' : '#f44336',
+                    size: 12,
+                    symbol: 'diamond'
+                }
+            };
+            
+            const layout = {
+                title: {
+                    text: `${trade.type} Trade - ${trade.entryDate}`,
+                    font: {size: 16, color: '#333'}
+                },
+                xaxis: {
+                    title: 'Date',
+                    type: 'category',
+                    rangeslider: {visible: false}
+                },
+                yaxis: {
+                    title: 'Price',
+                    side: 'right'
+                },
+                plot_bgcolor: 'rgba(240,240,240,0.5)',
+                paper_bgcolor: 'transparent',
+                showlegend: true,
+                legend: {
+                    x: 0,
+                    y: 1,
+                    bgcolor: 'rgba(255,255,255,0.8)'
+                },
+                margin: {l: 50, r: 50, t: 50, b: 50}
+            };
+            
+            const traces = [candlestickTrace, refHighTrace, refLowTrace, entryTrace, exitTrace];
+            
+            Plotly.newPlot(containerId, traces, layout, {
+                responsive: true,
+                displayModeBar: true,
+                modeBarButtonsToRemove: ['pan2d', 'lasso2d', 'select2d']
+            });
+        }
+
+        function displayTrades(trades) {
+            const container = document.getElementById('trades-container');
+            container.innerHTML = '';
+            
+            if (trades.length === 0) {
+                container.innerHTML = `
+                    <div style="text-align: center; padding: 50px; color: #666;">
+                        <h3>No trades found in the current data set</h3>
+                        <p>Try generating more sample data or check different time periods</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            trades.forEach((trade, index) => {
+                const tradeDiv = document.createElement('div');
+                tradeDiv.className = `trade-container ${trade.type.toLowerCase()}-trade`;
+                
+                const profitClass = trade.pointsGained > 0 ? 'profit' : 'loss';
+                const profitSymbol = trade.pointsGained > 0 ? '+' : '';
+                
+                tradeDiv.innerHTML = `
+                    <div class="trade-header">
+                        <div class="trade-title">
+                            Trade ${index + 1}: ${trade.type} Signal
+                        </div>
+                        <div class="trade-info">
+                            <div class="trade-metric">Entry: ₹${trade.entryPrice.toFixed(2)}</div>
+                            <div class="trade-metric">Exit: ₹${trade.exitPrice.toFixed(2)}</div>
+                            <div class="trade-metric ${profitClass}">
+                                Points: ${profitSymbol}${trade.pointsGained.toFixed(2)}
+                            </div>
+                            <div class="trade-metric">
+                                Ref High: ₹${trade.refHigh.toFixed(2)}
+                            </div>
+                            <div class="trade-metric">
+                                Ref Low: ₹${trade.refLow.toFixed(2)}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="chart-container" id="chart-${index}"></div>
+                `;
+                
+                container.appendChild(tradeDiv);
+                
+                // Create chart after div is added to DOM
+                setTimeout(() => {
+                    createCandlestickChart(trade, sampleData, `chart-${index}`);
+                }, 100);
+            });
+        }
+
+        function generateTrades() {
+            const trades = identifyTrades(sampleData);
+            displayTrades(trades.slice(0, 3)); // Show first 3 trades
+        }
+
+        function showAllTrades() {
+            const trades = identifyTrades(sampleData);
+            displayTrades(trades);
+        }
+
+        // Initialize on page load
+        window.onload = function() {
+            generateTrades();
+        };
+    </script>
+</body>
+</html>
